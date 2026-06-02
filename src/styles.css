@@ -1,0 +1,243 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f4f4f5;
+  color: #111;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fff;
+  border-bottom: 1px solid #e4e4e7;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbar button,
+.toolbar label.file {
+  padding: 6px 12px;
+  border: 1px solid #d4d4d8;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.toolbar button:hover:not(:disabled),
+.toolbar label.file:hover {
+  background: #f4f4f5;
+}
+
+.toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar button.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.toolbar .spacer {
+  flex: 1;
+}
+
+.toolbar .hint {
+  color: #71717a;
+  font-size: 13px;
+}
+
+.viewer {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.empty {
+  margin-top: 80px;
+  color: #71717a;
+  font-size: 15px;
+  text-align: center;
+}
+
+.page {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.page canvas {
+  display: block;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.overlay.placing-text {
+  cursor: text;
+}
+
+.annotation {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+}
+
+.annotation.text {
+  min-width: 60px;
+  padding: 2px 4px;
+  border: 1px dashed transparent;
+  background: transparent;
+  color: #111;
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+.annotation.text:hover,
+.annotation.text.selected {
+  border-color: #2563eb;
+}
+
+.annotation.text textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  resize: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+.annotation.signature img {
+  display: block;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+
+.annotation.signature {
+  border: 1px dashed transparent;
+}
+
+.annotation.signature:hover,
+.annotation.signature.selected {
+  border-color: #2563eb;
+}
+
+.annotation .delete-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  display: none;
+}
+
+.annotation.selected .delete-btn {
+  display: block;
+}
+
+.annotation .resize-handle {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+  background: #2563eb;
+  border: 2px solid #fff;
+  border-radius: 2px;
+  cursor: nwse-resize;
+  display: none;
+}
+
+.annotation.selected .resize-handle {
+  display: block;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  width: 540px;
+  max-width: 90vw;
+}
+
+.modal h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.modal .sig-canvas-wrap {
+  border: 1px solid #d4d4d8;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.modal .sig-canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 200px;
+  cursor: crosshair;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.modal-actions button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #d4d4d8;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-actions button.primary {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
