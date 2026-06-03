@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import type { Annotation, RenderedPage } from './types';
+import type { Annotation } from './types';
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -14,7 +14,6 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 export async function exportPdf(
   pdfBytes: ArrayBuffer,
   annotations: Annotation[],
-  pages: Map<number, RenderedPage>,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -30,24 +29,20 @@ export async function exportPdf(
   for (const [pageIndex, anns] of byPage) {
     const page = pdfPages[pageIndex];
     if (!page) continue;
-    const info = pages.get(pageIndex);
-    if (!info) continue;
-    const scale = info.scale;
-    const heightPt = info.heightPt;
+    const heightPt = page.getHeight();
 
     for (const a of anns) {
       if (a.type === 'text') {
         if (!a.text.trim()) continue;
-        const fontSize = a.fontSize / scale;
+        const fontSize = a.fontSize;
         const lineHeight = fontSize * 1.2;
         const ascent = fontSize * 0.85;
-        const xPdf = a.x / scale;
-        const topPdf = heightPt - a.y / scale;
+        const topPdf = heightPt - a.y;
         const { r, g, b } = hexToRgb(a.color);
         const lines = a.text.split('\n');
         lines.forEach((line, i) => {
           page.drawText(line, {
-            x: xPdf,
+            x: a.x,
             y: topPdf - i * lineHeight - ascent,
             size: fontSize,
             font: helvetica,
@@ -57,10 +52,10 @@ export async function exportPdf(
       } else {
         const png = await pdfDoc.embedPng(a.dataUrl);
         page.drawImage(png, {
-          x: a.x / scale,
-          y: heightPt - (a.y + a.height) / scale,
-          width: a.width / scale,
-          height: a.height / scale,
+          x: a.x,
+          y: heightPt - (a.y + a.height),
+          width: a.width,
+          height: a.height,
         });
       }
     }

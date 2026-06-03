@@ -3,10 +3,10 @@ import type { Annotation } from './types';
 
 interface Props {
   annotation: Annotation;
+  scale: number;
   selected: boolean;
   onChange: (a: Annotation) => void;
   onSelect: (id: string | null) => void;
-  onDelete: (id: string) => void;
 }
 
 type DragState =
@@ -23,12 +23,11 @@ type DragState =
 
 export function AnnotationView({
   annotation,
+  scale,
   selected,
   onChange,
   onSelect,
-  onDelete,
 }: Props) {
-  const elRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [drag, setDrag] = useState<DragState>(null);
 
@@ -38,13 +37,13 @@ export function AnnotationView({
     if (!ta) return;
     ta.style.height = 'auto';
     ta.style.height = `${ta.scrollHeight}px`;
-  }, [annotation]);
+  }, [annotation, scale]);
 
   useEffect(() => {
     if (!drag) return;
     const handleMove = (e: PointerEvent) => {
-      const dx = e.clientX - drag.startX;
-      const dy = e.clientY - drag.startY;
+      const dx = (e.clientX - drag.startX) / scale;
+      const dy = (e.clientY - drag.startY) / scale;
       if (drag.kind === 'move') {
         onChange({
           ...annotation,
@@ -52,8 +51,8 @@ export function AnnotationView({
           y: Math.max(0, drag.origY + dy),
         });
       } else {
-        let w = Math.max(20, drag.origW + dx);
-        let h = Math.max(20, drag.origH + dy);
+        let w = Math.max(8, drag.origW + dx);
+        let h = Math.max(8, drag.origH + dy);
         if (drag.aspect) {
           h = w / drag.aspect;
         }
@@ -67,12 +66,12 @@ export function AnnotationView({
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
     };
-  }, [drag, annotation, onChange]);
+  }, [drag, annotation, onChange, scale]);
 
   const startMove = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
-    if ((e.target as HTMLElement).classList.contains('resize-handle')) return;
-    if ((e.target as HTMLElement).classList.contains('delete-btn')) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'TEXTAREA') return;
+    if (target.classList.contains('resize-handle')) return;
     e.stopPropagation();
     onSelect(annotation.id);
     setDrag({
@@ -100,25 +99,28 @@ export function AnnotationView({
   };
 
   const style: React.CSSProperties = {
-    left: annotation.x,
-    top: annotation.y,
-    width: annotation.width,
-    height: annotation.type === 'text' ? 'auto' : annotation.height,
-    minHeight: annotation.type === 'text' ? annotation.height : undefined,
+    left: annotation.x * scale,
+    top: annotation.y * scale,
+    width: annotation.width * scale,
+    height: annotation.type === 'text' ? 'auto' : annotation.height * scale,
+    minHeight: annotation.type === 'text' ? annotation.height * scale : undefined,
   };
 
   if (annotation.type === 'text') {
     return (
       <div
-        ref={elRef}
         className={`annotation text ${selected ? 'selected' : ''}`}
-        style={{ ...style, fontSize: annotation.fontSize, color: annotation.color }}
+        style={{
+          ...style,
+          fontSize: annotation.fontSize * scale,
+          color: annotation.color,
+        }}
         onPointerDown={startMove}
       >
         <textarea
           ref={textareaRef}
           value={annotation.text}
-          placeholder="Type here…"
+          placeholder="Type here"
           onChange={(e) => {
             onChange({ ...annotation, text: e.target.value });
             const ta = e.target;
@@ -128,35 +130,18 @@ export function AnnotationView({
           onFocus={() => onSelect(annotation.id)}
           rows={1}
         />
-        <button
-          className="delete-btn"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => onDelete(annotation.id)}
-          aria-label="Delete"
-        >
-          ×
-        </button>
       </div>
     );
   }
 
   return (
     <div
-      ref={elRef}
       className={`annotation signature ${selected ? 'selected' : ''}`}
       style={style}
       onPointerDown={startMove}
     >
       <img src={annotation.dataUrl} alt="signature" draggable={false} />
       <span className="resize-handle" onPointerDown={startResize} />
-      <button
-        className="delete-btn"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => onDelete(annotation.id)}
-        aria-label="Delete"
-      >
-        ×
-      </button>
     </div>
   );
 }

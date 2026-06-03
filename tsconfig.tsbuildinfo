@@ -1,1 +1,1 @@
-{"root":["./src/AnnotationView.tsx","./src/App.tsx","./src/PdfPage.tsx","./src/SignaturePadModal.tsx","./src/export.ts","./src/main.tsx","./src/pdfjs-setup.ts","./src/types.ts","./src/vite-env.d.ts"],"version":"5.9.3"}
+{"root":["./src/AnnotationView.tsx","./src/App.tsx","./src/EmptyState.tsx","./src/Icon.tsx","./src/PdfPage.tsx","./src/PropertiesPanel.tsx","./src/SignaturePadModal.tsx","./src/Toast.tsx","./src/Toolbar.tsx","./src/export.ts","./src/main.tsx","./src/pdfjs-setup.ts","./src/types.ts","./src/vite-env.d.ts"],"version":"5.9.3"}
