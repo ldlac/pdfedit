@@ -17,6 +17,7 @@ export async function exportPdf(
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const courier = await pdfDoc.embedFont(StandardFonts.Courier);
   const pdfPages = pdfDoc.getPages();
 
   const byPage = new Map<number, Annotation[]>();
@@ -49,6 +50,25 @@ export async function exportPdf(
             color: rgb(r, g, b),
           });
         });
+      } else if (a.type === 'grid') {
+        if (!a.text) continue;
+        const fontSize = a.fontSize;
+        const ascent = fontSize * 0.85;
+        const baselineY = heightPt - a.y - (a.height - fontSize) / 2 - ascent;
+        const { r, g, b } = hexToRgb(a.color);
+        for (let i = 0; i < a.text.length && i < a.boxCount; i++) {
+          const ch = a.text[i];
+          if (ch === ' ') continue;
+          const charWidth = courier.widthOfTextAtSize(ch, fontSize);
+          const centerX = a.x + i * a.boxWidth + a.boxWidth / 2;
+          page.drawText(ch, {
+            x: centerX - charWidth / 2,
+            y: baselineY,
+            size: fontSize,
+            font: courier,
+            color: rgb(r, g, b),
+          });
+        }
       } else {
         const png = await pdfDoc.embedPng(a.dataUrl);
         page.drawImage(png, {

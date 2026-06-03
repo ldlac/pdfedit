@@ -6,12 +6,17 @@ interface Props {
   hasDoc: boolean;
   tool: Tool;
   exporting: boolean;
+  detecting: boolean;
+  suggestionCount: number;
+  showSuggestions: boolean;
   scale: number;
   currentPage: number;
   numPages: number;
   onPickFile: () => void;
   onSelectTool: (t: Tool) => void;
   onOpenSignaturePad: () => void;
+  onDetect: () => void;
+  onToggleSuggestions: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
@@ -23,12 +28,17 @@ export function Toolbar({
   hasDoc,
   tool,
   exporting,
+  detecting,
+  suggestionCount,
+  showSuggestions,
   scale,
   currentPage,
   numPages,
   onPickFile,
   onSelectTool,
   onOpenSignaturePad,
+  onDetect,
+  onToggleSuggestions,
   onZoomIn,
   onZoomOut,
   onZoomReset,
@@ -65,6 +75,25 @@ export function Toolbar({
           <Icon name="signature" />
           Signature
         </button>
+        <button
+          className="btn"
+          disabled={!hasDoc || detecting}
+          onClick={onDetect}
+          title="Detect form fields and fill-in lines"
+        >
+          <Icon name="wand" />
+          {detecting ? 'Detecting…' : 'Detect fields'}
+        </button>
+        {suggestionCount > 0 && (
+          <button
+            className={`btn ${showSuggestions ? 'active' : ''}`}
+            onClick={onToggleSuggestions}
+            title={showSuggestions ? 'Hide suggestions' : 'Show suggestions'}
+          >
+            <Icon name={showSuggestions ? 'eye' : 'eye-off'} />
+            {suggestionCount} found
+          </button>
+        )}
       </div>
 
       <div className="spacer" />

@@ -298,6 +298,49 @@ button {
   color: var(--text-soft);
 }
 
+.annotation.grid {
+  border: 1px dashed transparent;
+  border-radius: 2px;
+}
+
+.annotation.grid:hover {
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+.annotation.grid.selected {
+  border-color: var(--primary);
+}
+
+.grid-cells {
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+}
+
+.grid-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, Menlo, "SF Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.grid-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--primary);
+  outline: none;
+  padding: 0;
+  text-align: center;
+  font-family: ui-monospace, Menlo, "SF Mono", Consolas, monospace;
+  z-index: 2;
+}
+
 .annotation.signature {
   border: 1px dashed transparent;
   border-radius: 2px;
@@ -334,6 +377,73 @@ button {
 
 .annotation.selected .resize-handle {
   display: block;
+}
+
+/* Suggestion overlays */
+.suggestion {
+  position: absolute;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1.5px dashed var(--primary);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s;
+  font: inherit;
+  color: inherit;
+}
+
+.suggestion:hover {
+  background: rgba(37, 99, 235, 0.18);
+}
+
+.suggestion.signature {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: #f59e0b;
+}
+
+.suggestion.signature:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.suggestion.grid {
+  background: rgba(147, 51, 234, 0.08);
+  border-color: #9333ea;
+}
+
+.suggestion.grid:hover {
+  background: rgba(147, 51, 234, 0.18);
+}
+
+.suggestion.grid .suggestion-tag {
+  background: #9333ea;
+}
+
+.suggestion-tag {
+  position: absolute;
+  top: -22px;
+  left: -1px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px 4px 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
+}
+
+.suggestion.signature .suggestion-tag {
+  background: #f59e0b;
+}
+
+.suggestion-tag .icon {
+  width: 10px;
+  height: 10px;
 }
 
 /* Properties sidebar */

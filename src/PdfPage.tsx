@@ -1,7 +1,8 @@
 import { forwardRef, useEffect, useRef } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import type { Annotation, RenderedPage, Tool } from './types';
+import type { Annotation, RenderedPage, Suggestion, Tool } from './types';
 import { AnnotationView } from './AnnotationView';
+import { Icon } from './Icon';
 
 interface Props {
   pdf: PDFDocumentProxy;
@@ -10,11 +11,14 @@ interface Props {
   tool: Tool;
   pendingSignature: string | null;
   annotations: Annotation[];
+  suggestions: Suggestion[];
+  showSuggestions: boolean;
   selectedId: string | null;
   onRendered: (info: RenderedPage) => void;
   onPagePointerDown: (pageIndex: number, xPt: number, yPt: number) => void;
   onAnnotationChange: (a: Annotation) => void;
   onAnnotationSelect: (id: string | null) => void;
+  onSuggestionClick: (s: Suggestion) => void;
 }
 
 export const PdfPage = forwardRef<HTMLDivElement, Props>(function PdfPage(
@@ -25,11 +29,14 @@ export const PdfPage = forwardRef<HTMLDivElement, Props>(function PdfPage(
     tool,
     pendingSignature,
     annotations,
+    suggestions,
+    showSuggestions,
     selectedId,
     onRendered,
     onPagePointerDown,
     onAnnotationChange,
     onAnnotationSelect,
+    onSuggestionClick,
   },
   ref,
 ) {
@@ -81,6 +88,9 @@ export const PdfPage = forwardRef<HTMLDivElement, Props>(function PdfPage(
   };
 
   const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
+  const pageSuggestions = showSuggestions
+    ? suggestions.filter((s) => s.pageIndex === pageIndex)
+    : [];
 
   const overlayClass = [
     'overlay',
@@ -98,6 +108,43 @@ export const PdfPage = forwardRef<HTMLDivElement, Props>(function PdfPage(
         className={overlayClass}
         onPointerDown={handlePointerDown}
       >
+        {pageSuggestions.map((s) => {
+          const iconName =
+            s.kind === 'signature' ? 'signature' : s.kind === 'grid' ? 'wand' : 'text';
+          const defaultLabel =
+            s.kind === 'signature'
+              ? 'Sign here'
+              : s.kind === 'grid'
+                ? `Grid (${s.boxCount})`
+                : 'Text';
+          const title =
+            s.kind === 'signature'
+              ? `Click to sign${s.label ? ` (${s.label})` : ''}`
+              : s.kind === 'grid'
+                ? `Click to fill ${s.boxCount} boxes`
+                : `Click to add text${s.label ? ` (${s.label})` : ''}`;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              className={`suggestion ${s.kind} ${s.source}`}
+              style={{
+                left: s.x * scale,
+                top: s.y * scale,
+                width: s.width * scale,
+                height: s.height * scale,
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => onSuggestionClick(s)}
+              title={title}
+            >
+              <span className="suggestion-tag">
+                <Icon name={iconName} />
+                {s.label ?? defaultLabel}
+              </span>
+            </button>
+          );
+        })}
         {pageAnnotations.map((a) => (
           <AnnotationView
             key={a.id}

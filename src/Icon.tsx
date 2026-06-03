@@ -9,7 +9,10 @@ type IconName =
   | 'check'
   | 'arrow'
   | 'cursor'
-  | 'upload';
+  | 'upload'
+  | 'wand'
+  | 'eye'
+  | 'eye-off';
 
 const paths: Record<IconName, JSX.Element> = {
   file: (
@@ -64,6 +67,26 @@ const paths: Record<IconName, JSX.Element> = {
       <path d="M12 3v14" />
       <path d="M5 10l7-7 7 7" />
       <path d="M5 21h14" />
+    </>
+  ),
+  wand: (
+    <>
+      <path d="M3 21l9-9" />
+      <path d="M14 4l2 2M19 7l2 2M15 10l2 2M10 15l2 2" />
+      <path d="M17 3l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  'eye-off': (
+    <>
+      <path d="M3 3l18 18" />
+      <path d="M10.6 6.1A10.9 10.9 0 0 1 12 6c6.5 0 10 6 10 6a17.2 17.2 0 0 1-3.2 4M6.6 6.6A17.3 17.3 0 0 0 2 12s3.5 6 10 6c1.6 0 3-.3 4.3-.8" />
+      <path d="M9.5 9.5a3 3 0 0 0 4 4" />
     </>
   ),
 };

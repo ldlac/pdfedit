@@ -15,7 +15,8 @@ import { PropertiesPanel } from './PropertiesPanel';
 import { EmptyState } from './EmptyState';
 import { Toast } from './Toast';
 import { downloadBlob, exportPdf } from './export';
-import type { Annotation, RenderedPage, Tool } from './types';
+import { detectFields } from './detect';
+import type { Annotation, RenderedPage, Suggestion, Tool } from './types';
 
 const DEFAULT_SCALE = 1.5;
 const MIN_SCALE = 0.5;
@@ -40,6 +41,16 @@ export function App() {
   const [currentPage, setCurrentPage] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [detecting, setDetecting] = useState(false);
+  const [pendingPlacement, setPendingPlacement] = useState<{
+    pageIndex: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const pagesRef = useRef<Map<number, RenderedPage>>(new Map());
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -63,6 +74,8 @@ export function App() {
     setSelectedId(null);
     setTool(null);
     setPendingSignature(null);
+    setPendingPlacement(null);
+    setSuggestions([]);
     setCurrentPage(0);
     setPdfBytes(exportCopy);
     setPdfDoc(doc);
@@ -140,8 +153,111 @@ export function App() {
 
   const handleSignatureSave = (dataUrl: string) => {
     setShowSigPad(false);
-    setPendingSignature(dataUrl);
     setTool(null);
+    if (pendingPlacement) {
+      const img = new Image();
+      const placement = pendingPlacement;
+      img.onload = () => {
+        const aspect = img.width / img.height || 2;
+        let { width, height } = placement;
+        if (width / height > aspect) {
+          width = height * aspect;
+        } else {
+          height = width / aspect;
+        }
+        const newAnn: Annotation = {
+          id: uid(),
+          type: 'signature',
+          pageIndex: placement.pageIndex,
+          x: placement.x + (placement.width - width) / 2,
+          y: placement.y + (placement.height - height) / 2,
+          width,
+          height,
+          dataUrl,
+        };
+        setAnnotations((prev) => [...prev, newAnn]);
+        setSelectedId(newAnn.id);
+        setPendingPlacement(null);
+        setSuggestions((prev) =>
+          prev.filter(
+            (s) =>
+              !(
+                s.pageIndex === placement.pageIndex &&
+                Math.abs(s.x - placement.x) < 0.5 &&
+                Math.abs(s.y - placement.y) < 0.5
+              ),
+          ),
+        );
+      };
+      img.src = dataUrl;
+      return;
+    }
+    setPendingSignature(dataUrl);
+  };
+
+  const handleDetect = async () => {
+    if (!pdfDoc) return;
+    setDetecting(true);
+    try {
+      const found = await detectFields(pdfDoc);
+      setSuggestions(found);
+      setShowSuggestions(true);
+      setToast(found.length ? `Found ${found.length} field${found.length > 1 ? 's' : ''}` : 'No fields detected');
+    } finally {
+      setDetecting(false);
+    }
+  };
+
+  const handleSuggestionClick = (s: Suggestion) => {
+    if (s.kind === 'signature') {
+      setPendingPlacement({
+        pageIndex: s.pageIndex,
+        x: s.x,
+        y: s.y,
+        width: s.width,
+        height: s.height,
+      });
+      setShowSigPad(true);
+      return;
+    }
+    if (s.kind === 'grid' && s.boxCount && s.boxWidth) {
+      const fontSize = Math.max(8, Math.min(s.height * 0.65, s.boxWidth * 0.85));
+      const newAnn: Annotation = {
+        id: uid(),
+        type: 'grid',
+        pageIndex: s.pageIndex,
+        x: s.x,
+        y: s.y,
+        width: s.width,
+        height: s.height,
+        text: '',
+        fontSize,
+        color: '#111111',
+        boxCount: s.boxCount,
+        boxWidth: s.boxWidth,
+      };
+      setAnnotations((prev) => [...prev, newAnn]);
+      setSelectedId(newAnn.id);
+      setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+      return;
+    }
+    // Plain text suggestion.
+    const fontSize = Math.max(8, Math.min(24, s.height * 0.7));
+    const newAnn: Annotation = {
+      id: uid(),
+      type: 'text',
+      pageIndex: s.pageIndex,
+      x: s.x + 2,
+      y: s.y + (s.height - fontSize) / 2,
+      width: Math.max(60, s.width - 4),
+      height: fontSize,
+      text: '',
+      fontSize,
+      color: '#111111',
+    };
+    setAnnotations((prev) => [...prev, newAnn]);
+    setSelectedId(newAnn.id);
+    setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
   };
 
   const handleSave = async () => {
@@ -174,6 +290,7 @@ export function App() {
       if (e.key === 'Escape') {
         setTool(null);
         setPendingSignature(null);
+        setPendingPlacement(null);
         setSelectedId(null);
         if (isEditable) (target as HTMLElement).blur();
         return;
@@ -246,6 +363,9 @@ export function App() {
         hasDoc={!!pdfDoc}
         tool={tool}
         exporting={exporting}
+        detecting={detecting}
+        suggestionCount={suggestions.length}
+        showSuggestions={showSuggestions}
         scale={scale}
         currentPage={currentPage}
         numPages={numPages}
@@ -253,8 +373,14 @@ export function App() {
         onSelectTool={(t) => {
           setTool(t);
           setPendingSignature(null);
+          setPendingPlacement(null);
         }}
-        onOpenSignaturePad={() => setShowSigPad(true)}
+        onOpenSignaturePad={() => {
+          setPendingPlacement(null);
+          setShowSigPad(true);
+        }}
+        onDetect={handleDetect}
+        onToggleSuggestions={() => setShowSuggestions((v) => !v)}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onZoomReset={zoomReset}
@@ -294,11 +420,14 @@ export function App() {
                   tool={tool}
                   pendingSignature={pendingSignature}
                   annotations={annotations}
+                  suggestions={suggestions}
+                  showSuggestions={showSuggestions}
                   selectedId={selectedId}
                   onRendered={handleRendered}
                   onPagePointerDown={handlePagePointerDown}
                   onAnnotationChange={handleAnnotationChange}
                   onAnnotationSelect={setSelectedId}
+                  onSuggestionClick={handleSuggestionClick}
                 />
               </div>
             ))}

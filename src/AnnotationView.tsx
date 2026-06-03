@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Annotation } from './types';
+import type { Annotation, GridTextAnnotation } from './types';
 
 interface Props {
   annotation: Annotation;
@@ -70,7 +70,7 @@ export function AnnotationView({
 
   const startMove = (e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
-    if (target.tagName === 'TEXTAREA') return;
+    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') return;
     if (target.classList.contains('resize-handle')) return;
     e.stopPropagation();
     onSelect(annotation.id);
@@ -134,6 +134,20 @@ export function AnnotationView({
     );
   }
 
+  if (annotation.type === 'grid') {
+    return (
+      <GridAnnotationView
+        annotation={annotation}
+        scale={scale}
+        selected={selected}
+        style={style}
+        startMove={startMove}
+        onChange={onChange}
+        onSelect={onSelect}
+      />
+    );
+  }
+
   return (
     <div
       className={`annotation signature ${selected ? 'selected' : ''}`}
@@ -142,6 +156,65 @@ export function AnnotationView({
     >
       <img src={annotation.dataUrl} alt="signature" draggable={false} />
       <span className="resize-handle" onPointerDown={startResize} />
+    </div>
+  );
+}
+
+interface GridProps {
+  annotation: GridTextAnnotation;
+  scale: number;
+  selected: boolean;
+  style: React.CSSProperties;
+  startMove: (e: React.PointerEvent) => void;
+  onChange: (a: Annotation) => void;
+  onSelect: (id: string | null) => void;
+}
+
+function GridAnnotationView({
+  annotation,
+  scale,
+  selected,
+  style,
+  startMove,
+  onChange,
+  onSelect,
+}: GridProps) {
+  const boxWidthPx = annotation.boxWidth * scale;
+  const fontSizePx = annotation.fontSize * scale;
+  return (
+    <div
+      className={`annotation grid ${selected ? 'selected' : ''}`}
+      style={style}
+      onPointerDown={startMove}
+    >
+      <div
+        className="grid-cells"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${annotation.boxCount}, ${boxWidthPx}px)`,
+          height: '100%',
+        }}
+      >
+        {Array.from({ length: annotation.boxCount }, (_, i) => (
+          <div
+            key={i}
+            className="grid-cell"
+            style={{ fontSize: fontSizePx, color: annotation.color }}
+          >
+            {annotation.text[i] ?? ''}
+          </div>
+        ))}
+      </div>
+      <input
+        className="grid-input"
+        value={annotation.text}
+        maxLength={annotation.boxCount}
+        onPointerDown={(e) => e.stopPropagation()}
+        onFocus={() => onSelect(annotation.id)}
+        onChange={(e) =>
+          onChange({ ...annotation, text: e.target.value.slice(0, annotation.boxCount) })
+        }
+      />
     </div>
   );
 }

@@ -25,8 +25,21 @@ export function PropertiesPanel({ annotation, onChange, onDelete }: Props) {
   return (
     <aside className="sidebar">
       <h3>
-        <Icon name={annotation.type === 'text' ? 'text' : 'signature'} />
-        {annotation.type === 'text' ? 'Text' : 'Signature'} properties
+        <Icon
+          name={
+            annotation.type === 'signature'
+              ? 'signature'
+              : annotation.type === 'grid'
+                ? 'wand'
+                : 'text'
+          }
+        />
+        {annotation.type === 'signature'
+          ? 'Signature'
+          : annotation.type === 'grid'
+            ? 'Grid text'
+            : 'Text'}{' '}
+        properties
       </h3>
 
       {annotation.type === 'text' && (
@@ -48,6 +61,65 @@ export function PropertiesPanel({ annotation, onChange, onDelete }: Props) {
               max={48}
               step={1}
               value={annotation.fontSize}
+              onChange={(e) =>
+                onChange({ ...annotation, fontSize: Number(e.target.value) })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Color</label>
+            <div className="row">
+              <input
+                type="color"
+                value={annotation.color}
+                onChange={(e) => onChange({ ...annotation, color: e.target.value })}
+              />
+              <div className="swatches">
+                {TEXT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`swatch ${annotation.color === c ? 'selected' : ''}`}
+                    style={{ background: c }}
+                    onClick={() => onChange({ ...annotation, color: c })}
+                    aria-label={`Color ${c}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {annotation.type === 'grid' && (
+        <>
+          <div className="field">
+            <label htmlFor="grid-content">
+              Content ({annotation.text.length}/{annotation.boxCount})
+            </label>
+            <input
+              id="grid-content"
+              type="text"
+              maxLength={annotation.boxCount}
+              value={annotation.text}
+              onChange={(e) =>
+                onChange({
+                  ...annotation,
+                  text: e.target.value.slice(0, annotation.boxCount),
+                })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Font size: {Math.round(annotation.fontSize)}pt</label>
+            <input
+              type="range"
+              min={6}
+              max={Math.max(12, Math.round(annotation.height))}
+              step={1}
+              value={Math.round(annotation.fontSize)}
               onChange={(e) =>
                 onChange({ ...annotation, fontSize: Number(e.target.value) })
               }
