@@ -31,14 +31,18 @@ export function PropertiesPanel({ annotation, onChange, onDelete }: Props) {
               ? 'signature'
               : annotation.type === 'grid'
                 ? 'wand'
-                : 'text'
+                : annotation.type === 'checkbox'
+                  ? 'check'
+                  : 'text'
           }
         />
         {annotation.type === 'signature'
           ? 'Signature'
           : annotation.type === 'grid'
             ? 'Grid text'
-            : 'Text'}{' '}
+            : annotation.type === 'checkbox'
+              ? 'Checkbox'
+              : 'Text'}{' '}
         properties
       </h3>
 
@@ -126,6 +130,59 @@ export function PropertiesPanel({ annotation, onChange, onDelete }: Props) {
             />
           </div>
 
+          <div className="field">
+            <label>Color</label>
+            <div className="row">
+              <input
+                type="color"
+                value={annotation.color}
+                onChange={(e) => onChange({ ...annotation, color: e.target.value })}
+              />
+              <div className="swatches">
+                {TEXT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`swatch ${annotation.color === c ? 'selected' : ''}`}
+                    style={{ background: c }}
+                    onClick={() => onChange({ ...annotation, color: c })}
+                    aria-label={`Color ${c}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {annotation.type === 'checkbox' && (
+        <>
+          <div className="field">
+            <label>
+              <input
+                type="checkbox"
+                checked={annotation.checked}
+                onChange={(e) =>
+                  onChange({ ...annotation, checked: e.target.checked })
+                }
+              />{' '}
+              Checked
+            </label>
+          </div>
+          <div className="field">
+            <label>Size: {Math.round(annotation.width)}pt</label>
+            <input
+              type="range"
+              min={6}
+              max={28}
+              step={1}
+              value={Math.round(annotation.width)}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                onChange({ ...annotation, width: v, height: v });
+              }}
+            />
+          </div>
           <div className="field">
             <label>Color</label>
             <div className="row">

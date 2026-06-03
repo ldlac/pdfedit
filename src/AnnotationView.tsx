@@ -109,6 +109,7 @@ export function AnnotationView({
   if (annotation.type === 'text') {
     return (
       <div
+        data-annotation-id={annotation.id}
         className={`annotation text ${selected ? 'selected' : ''}`}
         style={{
           ...style,
@@ -148,14 +149,119 @@ export function AnnotationView({
     );
   }
 
+  if (annotation.type === 'checkbox') {
+    return (
+      <CheckboxAnnotationView
+        annotation={annotation}
+        scale={scale}
+        selected={selected}
+        onChange={onChange}
+        onSelect={onSelect}
+      />
+    );
+  }
+
   return (
     <div
+      data-annotation-id={annotation.id}
       className={`annotation signature ${selected ? 'selected' : ''}`}
       style={style}
       onPointerDown={startMove}
     >
       <img src={annotation.dataUrl} alt="signature" draggable={false} />
       <span className="resize-handle" onPointerDown={startResize} />
+    </div>
+  );
+}
+
+interface CheckboxProps {
+  annotation: import('./types').CheckboxAnnotation;
+  scale: number;
+  selected: boolean;
+  onChange: (a: Annotation) => void;
+  onSelect: (id: string | null) => void;
+}
+
+function CheckboxAnnotationView({
+  annotation,
+  scale,
+  selected,
+  onChange,
+  onSelect,
+}: CheckboxProps) {
+  const downRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const dragRef = useRef(false);
+  const [drag, setDrag] = useState<DragState>(null);
+
+  useEffect(() => {
+    if (!drag) return;
+    const handleMove = (e: PointerEvent) => {
+      const dx = (e.clientX - drag.startX) / scale;
+      const dy = (e.clientY - drag.startY) / scale;
+      if (drag.kind !== 'move') return;
+      if (Math.abs(e.clientX - drag.startX) > 3 || Math.abs(e.clientY - drag.startY) > 3) {
+        dragRef.current = true;
+      }
+      onChange({
+        ...annotation,
+        x: Math.max(0, drag.origX + dx),
+        y: Math.max(0, drag.origY + dy),
+      });
+    };
+    const handleUp = () => setDrag(null);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+  }, [drag, annotation, onChange, scale]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    onSelect(annotation.id);
+    downRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+    dragRef.current = false;
+    setDrag({
+      kind: 'move',
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: annotation.x,
+      origY: annotation.y,
+    });
+  };
+
+  const onClick = () => {
+    if (dragRef.current) return;
+    onChange({ ...annotation, checked: !annotation.checked });
+  };
+
+  return (
+    <div
+      data-annotation-id={annotation.id}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          onChange({ ...annotation, checked: !annotation.checked });
+        }
+      }}
+      className={`annotation checkbox ${annotation.checked ? 'checked' : ''} ${selected ? 'selected' : ''}`}
+      style={{
+        left: annotation.x * scale,
+        top: annotation.y * scale,
+        width: annotation.width * scale,
+        height: annotation.height * scale,
+        color: annotation.color,
+      }}
+      onPointerDown={onPointerDown}
+      onClick={onClick}
+    >
+      {annotation.checked && (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 12l5 5L20 7" />
+        </svg>
+      )}
     </div>
   );
 }
@@ -183,6 +289,7 @@ function GridAnnotationView({
   const fontSizePx = annotation.fontSize * scale;
   return (
     <div
+      data-annotation-id={annotation.id}
       className={`annotation grid ${selected ? 'selected' : ''}`}
       style={style}
       onPointerDown={startMove}

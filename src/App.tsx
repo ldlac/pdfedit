@@ -208,56 +208,89 @@ export function App() {
     }
   };
 
-  const handleSuggestionClick = (s: Suggestion) => {
-    if (s.kind === 'signature') {
-      setPendingPlacement({
-        pageIndex: s.pageIndex,
-        x: s.x,
-        y: s.y,
-        width: s.width,
-        height: s.height,
-      });
-      setShowSigPad(true);
-      return;
-    }
-    if (s.kind === 'grid' && s.boxCount && s.boxWidth) {
-      const fontSize = Math.max(8, Math.min(s.height * 0.65, s.boxWidth * 0.85));
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
+
+  const materializeSuggestion = useCallback(
+    (s: Suggestion, opts: { focus: boolean }): string | null => {
+      if (s.kind === 'signature') {
+        setPendingPlacement({
+          pageIndex: s.pageIndex,
+          x: s.x,
+          y: s.y,
+          width: s.width,
+          height: s.height,
+        });
+        setShowSigPad(true);
+        return null;
+      }
+      if (s.kind === 'checkbox') {
+        const id = uid();
+        const newAnn: Annotation = {
+          id,
+          type: 'checkbox',
+          pageIndex: s.pageIndex,
+          x: s.x,
+          y: s.y,
+          width: s.width,
+          height: s.height,
+          checked: true,
+          color: '#111111',
+        };
+        setAnnotations((prev) => [...prev, newAnn]);
+        setSelectedId(id);
+        setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+        if (opts.focus) setPendingFocusId(id);
+        return id;
+      }
+      if (s.kind === 'grid' && s.boxCount && s.boxWidth) {
+        const id = uid();
+        const fontSize = Math.max(8, Math.min(s.height * 0.65, s.boxWidth * 0.85));
+        const newAnn: Annotation = {
+          id,
+          type: 'grid',
+          pageIndex: s.pageIndex,
+          x: s.x,
+          y: s.y,
+          width: s.width,
+          height: s.height,
+          text: '',
+          fontSize,
+          color: '#111111',
+          boxCount: s.boxCount,
+          boxWidth: s.boxWidth,
+        };
+        setAnnotations((prev) => [...prev, newAnn]);
+        setSelectedId(id);
+        setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+        if (opts.focus) setPendingFocusId(id);
+        return id;
+      }
+      // Plain text suggestion.
+      const id = uid();
+      const fontSize = Math.max(8, Math.min(24, s.height * 0.7));
       const newAnn: Annotation = {
-        id: uid(),
-        type: 'grid',
+        id,
+        type: 'text',
         pageIndex: s.pageIndex,
-        x: s.x,
-        y: s.y,
-        width: s.width,
-        height: s.height,
+        x: s.x + 2,
+        y: s.y + (s.height - fontSize) / 2,
+        width: Math.max(60, s.width - 4),
+        height: fontSize,
         text: '',
         fontSize,
         color: '#111111',
-        boxCount: s.boxCount,
-        boxWidth: s.boxWidth,
       };
       setAnnotations((prev) => [...prev, newAnn]);
-      setSelectedId(newAnn.id);
+      setSelectedId(id);
       setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
-      return;
-    }
-    // Plain text suggestion.
-    const fontSize = Math.max(8, Math.min(24, s.height * 0.7));
-    const newAnn: Annotation = {
-      id: uid(),
-      type: 'text',
-      pageIndex: s.pageIndex,
-      x: s.x + 2,
-      y: s.y + (s.height - fontSize) / 2,
-      width: Math.max(60, s.width - 4),
-      height: fontSize,
-      text: '',
-      fontSize,
-      color: '#111111',
-    };
-    setAnnotations((prev) => [...prev, newAnn]);
-    setSelectedId(newAnn.id);
-    setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+      if (opts.focus) setPendingFocusId(id);
+      return id;
+    },
+    [],
+  );
+
+  const handleSuggestionClick = (s: Suggestion) => {
+    materializeSuggestion(s, { focus: false });
   };
 
   const handleSave = async () => {
@@ -279,7 +312,11 @@ export function App() {
   const zoomOut = () => setScale((s) => Math.max(MIN_SCALE, +(s - SCALE_STEP).toFixed(2)));
   const zoomReset = () => setScale(DEFAULT_SCALE);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts. We use refs for the field state so the listener stays
+  // stable while still reading the latest annotations/suggestions on each key.
+  const fieldStateRef = useRef({ annotations, suggestions, selectedId });
+  fieldStateRef.current = { annotations, suggestions, selectedId };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -295,14 +332,105 @@ export function App() {
         if (isEditable) (target as HTMLElement).blur();
         return;
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditable && selectedId) {
+      if (
+        (e.key === 'Delete' || e.key === 'Backspace') &&
+        !isEditable &&
+        fieldStateRef.current.selectedId
+      ) {
         e.preventDefault();
-        handleAnnotationDelete(selectedId);
+        handleAnnotationDelete(fieldStateRef.current.selectedId);
+        return;
+      }
+      if (e.key === 'Tab') {
+        // Don't hijack Tab when focus is on toolbar/sidebar/properties controls,
+        // only when the user is inside the viewer or an annotation.
+        const inToolbar = !!target?.closest('.toolbar');
+        const inSidebar = !!target?.closest('.sidebar');
+        if (inToolbar || inSidebar) return;
+
+        const { annotations: anns, suggestions: sugs } = fieldStateRef.current;
+        // Build the spatial field list (skip signatures — they need the pad).
+        type Field =
+          | { kind: 'annotation'; id: string; pageIndex: number; x: number; y: number }
+          | { kind: 'suggestion'; s: Suggestion; pageIndex: number; x: number; y: number };
+        const fields: Field[] = [];
+        for (const a of anns) {
+          if (a.type === 'signature') continue;
+          fields.push({ kind: 'annotation', id: a.id, pageIndex: a.pageIndex, x: a.x, y: a.y });
+        }
+        for (const s of sugs) {
+          if (s.kind === 'signature') continue;
+          fields.push({ kind: 'suggestion', s, pageIndex: s.pageIndex, x: s.x, y: s.y });
+        }
+        if (fields.length === 0) return;
+        fields.sort((a, b) => {
+          if (a.pageIndex !== b.pageIndex) return a.pageIndex - b.pageIndex;
+          if (Math.abs(a.y - b.y) > 5) return a.y - b.y;
+          return a.x - b.x;
+        });
+
+        e.preventDefault();
+
+        // Find anchor: focused annotation, or current selection.
+        let anchorIdx = -1;
+        const annDiv = target?.closest('[data-annotation-id]') as HTMLElement | null;
+        const anchorId =
+          annDiv?.dataset.annotationId ?? fieldStateRef.current.selectedId ?? null;
+        if (anchorId) {
+          anchorIdx = fields.findIndex(
+            (f) => f.kind === 'annotation' && f.id === anchorId,
+          );
+        }
+
+        const dir = e.shiftKey ? -1 : 1;
+        const len = fields.length;
+        const start = anchorIdx === -1 ? (dir > 0 ? -1 : 0) : anchorIdx;
+        const nextIdx = ((start + dir) % len + len) % len;
+        const next = fields[nextIdx];
+
+        if (next.kind === 'suggestion') {
+          materializeSuggestion(next.s, { focus: true });
+        } else {
+          setSelectedId(next.id);
+          setPendingFocusId(next.id);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, handleAnnotationDelete]);
+  }, [handleAnnotationDelete, materializeSuggestion]);
+
+  // Scroll to and focus the input of an annotation when pendingFocusId is set.
+  useEffect(() => {
+    if (!pendingFocusId) return;
+    const id = pendingFocusId;
+    const raf = requestAnimationFrame(() => {
+      const div = document.querySelector(
+        `[data-annotation-id="${id}"]`,
+      ) as HTMLElement | null;
+      if (!div) {
+        setPendingFocusId(null);
+        return;
+      }
+      div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const input = div.querySelector('textarea, input') as
+        | HTMLTextAreaElement
+        | HTMLInputElement
+        | null;
+      if (input) {
+        input.focus({ preventScroll: true });
+        try {
+          input.select();
+        } catch {
+          /* nothing to select (e.g. on number inputs at min) */
+        }
+      } else {
+        div.focus({ preventScroll: true });
+      }
+      setPendingFocusId(null);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [pendingFocusId]);
 
   // Track which page is most visible for the page readout.
   useLayoutEffect(() => {

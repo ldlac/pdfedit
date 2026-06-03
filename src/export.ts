@@ -69,6 +69,30 @@ export async function exportPdf(
             color: rgb(r, g, b),
           });
         }
+      } else if (a.type === 'checkbox') {
+        if (!a.checked) continue;
+        const { r, g, b } = hexToRgb(a.color);
+        const yTopPdf = heightPt - a.y;
+        const yBotPdf = heightPt - a.y - a.height;
+        const thickness = Math.max(0.7, Math.min(a.width, a.height) * 0.14);
+        // Two-segment check mark: down-stroke from upper-left to middle-bottom,
+        // then up-stroke to upper-right.
+        const elbow = {
+          x: a.x + a.width * 0.42,
+          y: yBotPdf + a.height * 0.22,
+        };
+        page.drawLine({
+          start: { x: a.x + a.width * 0.18, y: yTopPdf - a.height * 0.5 },
+          end: elbow,
+          thickness,
+          color: rgb(r, g, b),
+        });
+        page.drawLine({
+          start: elbow,
+          end: { x: a.x + a.width * 0.86, y: yTopPdf - a.height * 0.12 },
+          thickness,
+          color: rgb(r, g, b),
+        });
       } else {
         const png = await pdfDoc.embedPng(a.dataUrl);
         page.drawImage(png, {

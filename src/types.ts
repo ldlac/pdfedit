@@ -31,7 +31,17 @@ export interface GridTextAnnotation extends BaseAnnotation {
   boxWidth: number;
 }
 
-export type Annotation = TextAnnotation | SignatureAnnotation | GridTextAnnotation;
+export interface CheckboxAnnotation extends BaseAnnotation {
+  type: 'checkbox';
+  checked: boolean;
+  color: string;
+}
+
+export type Annotation =
+  | TextAnnotation
+  | SignatureAnnotation
+  | GridTextAnnotation
+  | CheckboxAnnotation;
 
 export interface RenderedPage {
   pageIndex: number;
@@ -39,8 +49,13 @@ export interface RenderedPage {
   heightPt: number;
 }
 
-export type SuggestionKind = 'text' | 'signature' | 'grid';
-export type SuggestionSource = 'widget' | 'underscore' | 'grid';
+export type SuggestionKind = 'text' | 'signature' | 'grid' | 'checkbox';
+export type SuggestionSource =
+  | 'widget'
+  | 'underscore'
+  | 'grid'
+  | 'label'
+  | 'checkbox';
 
 export interface Suggestion {
   id: string;

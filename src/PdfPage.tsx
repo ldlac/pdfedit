@@ -110,19 +110,29 @@ export const PdfPage = forwardRef<HTMLDivElement, Props>(function PdfPage(
       >
         {pageSuggestions.map((s) => {
           const iconName =
-            s.kind === 'signature' ? 'signature' : s.kind === 'grid' ? 'wand' : 'text';
+            s.kind === 'signature'
+              ? 'signature'
+              : s.kind === 'grid'
+                ? 'wand'
+                : s.kind === 'checkbox'
+                  ? 'check'
+                  : 'text';
           const defaultLabel =
             s.kind === 'signature'
               ? 'Sign here'
               : s.kind === 'grid'
                 ? `Grid (${s.boxCount})`
-                : 'Text';
+                : s.kind === 'checkbox'
+                  ? s.label ?? 'Checkbox'
+                  : 'Text';
           const title =
             s.kind === 'signature'
               ? `Click to sign${s.label ? ` (${s.label})` : ''}`
               : s.kind === 'grid'
                 ? `Click to fill ${s.boxCount} boxes`
-                : `Click to add text${s.label ? ` (${s.label})` : ''}`;
+                : s.kind === 'checkbox'
+                  ? `Click to check${s.label ? ` (${s.label})` : ''}`
+                  : `Click to add text${s.label ? ` (${s.label})` : ''}`;
           return (
             <button
               key={s.id}
